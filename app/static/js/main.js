@@ -44,9 +44,80 @@ async function loadIslemler(filtre = 'tum') {
     }).join('');
 }
 
+// Aylık özet grafiği
+let aylikOzetChart = null;
+
+// Ay seçme butonunu doldur ve değişiklikte grafiği güncelle
+function fillAySec() {
+    const aylar = [
+        'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+        'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
+    ];
+    const now = new Date();
+    const aySec = document.getElementById('aySec');
+    aySec.innerHTML = aylar.map((ad, i) =>
+        `<option value="${i+1}" ${i === now.getMonth() ? 'selected' : ''}>${ad} ${now.getFullYear()}</option>`
+    ).join('');
+    aySec.onchange = () => loadAylikOzet(parseInt(aySec.value));
+}
+
+async function loadAylikOzet(ay = null) {
+    const now = new Date();
+    const yil = now.getFullYear();
+    if (!ay) ay = now.getMonth() + 1;
+    try {
+        const res = await fetch(`/api/aylik-ozet?yil=${yil}&ay=${ay}`);
+        const data = await res.json();
+        console.log('Aylık özet API verisi:', data);
+        if (!data || data.error || !data.haftalar || !data.gelirler || !data.giderler) {
+            document.getElementById('aylikOzet').innerHTML = data.error ? data.error : 'Veri yok';
+            return;
+        }
+        const ctx = document.getElementById('aylikOzetChart').getContext('2d');
+        if (aylikOzetChart) aylikOzetChart.destroy();
+        aylikOzetChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.haftalar.map(h => `${h}. Hafta`),
+                datasets: [
+                    {
+                        label: 'Gelir',
+                        data: data.gelirler,
+                        backgroundColor: 'rgba(34,197,94,0.6)',
+                        borderColor: 'rgba(34,197,94,1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Gider',
+                        data: data.giderler,
+                        backgroundColor: 'rgba(239,68,68,0.6)',
+                        borderColor: 'rgba(239,68,68,1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'top' },
+                    title: { display: false }
+                },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    } catch (e) {
+        console.error('Aylık özet hata:', e);
+        document.getElementById('aylikOzet').innerHTML = 'Veri yok';
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     loadHesaplar();
     loadIslemler();
+    fillAySec();
+    loadAylikOzet();
     document.getElementById('islemFiltre').addEventListener('change', e => loadIslemler(e.target.value));
 });
 

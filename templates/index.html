@@ -28,14 +28,16 @@
         <!-- Orta ve Sağ Alanlar -->
         <div class="md:col-span-3 flex flex-col gap-6 md:grid md:grid-cols-3 md:gap-6">
             <!-- Aylık Özet -->
-            <div class="bg-white rounded-xl shadow p-4 md:col-span-2 order-2 md:order-1 min-h-[300px]">
+            <div class="bg-white rounded-xl shadow p-4 md:col-span-2 order-2 md:order-1 min-h-[350px] h-auto">
                 <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 gap-2">
                     <span class="font-semibold text-gray-700">Aylık Özet</span>
                     <select id="aySec" class="border rounded px-2 py-1 text-sm w-full sm:w-auto">
                         <!-- Aylar JS ile gelecek -->
                     </select>
                 </div>
-                <div id="aylikOzet" class="h-32 flex items-center justify-center text-gray-400">Veri yok</div>
+                <div id="aylikOzet" class="flex items-center justify-center text-gray-400 min-h-[250px] h-64">
+                    <canvas id="aylikOzetChart" class="w-full h-full" height="220"></canvas>
+                </div>
                 <div class="flex justify-between text-xs text-gray-400 mt-2">
                     <span>Pzt</span><span>Sal</span><span>Çar</span><span>Per</span><span>Cum</span><span>Cmt</span><span>Paz</span>
                 </div>
@@ -71,5 +73,7 @@
         <button id="modalKapat" class="mt-4 w-full bg-gray-200 rounded py-2 font-bold">Kapat</button>
     </div>
 </div>
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="/static/js/main.js"></script>
 {% endblock %} 
