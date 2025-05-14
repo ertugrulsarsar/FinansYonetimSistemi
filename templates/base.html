@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Para Takip Cüzdanı</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-[#f5f7fb] min-h-screen w-full">
+    <nav class="bg-white shadow-sm py-4 px-4 sm:px-8 flex justify-between items-center w-full">
+        <div>
+            <span class="text-2xl font-bold text-blue-700">Para Takip Cüzdanı</span>
+            <span class="block text-sm text-gray-500">Finansal hareketlerinizi kolayca takip edin</span>
+        </div>
+        <div>
+            <span id="toplamBakiye" class="bg-blue-50 text-blue-700 font-bold rounded-xl px-6 py-3 text-xl shadow">Toplam Bakiye: <span id="bakiye">₺0,00</span></span>
+        </div>
+    </nav>
+    <main class="w-full min-h-[calc(100vh-80px)]">
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html> 
