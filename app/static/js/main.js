@@ -113,184 +113,267 @@ async function loadAylikOzet(ay = null) {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    loadHesaplar();
-    loadIslemler();
-    fillAySec();
-    loadAylikOzet();
-    document.getElementById('islemFiltre').addEventListener('change', e => loadIslemler(e.target.value));
-});
-
 // Modal aç/kapat fonksiyonları
 function modalAc(icerikHtml) {
     document.getElementById('modalIcerik').innerHTML = icerikHtml;
     document.getElementById('modal').classList.remove('hidden');
 }
+
 function modalKapat() {
     document.getElementById('modal').classList.add('hidden');
 }
-document.getElementById('modalKapat').onclick = modalKapat;
 
-// Hesap Ekle butonu
-document.getElementById('hesapEkleBtn').onclick = function() {
-    modalAc(`
-        <h2 class="text-xl font-bold mb-4">Hesap Ekle</h2>
-        <form id="hesapEkleForm" class="space-y-3">
-            <input name="ad" class="w-full border rounded p-2" placeholder="Hesap Adı" required>
-            <input name="bakiye" type="number" class="w-full border rounded p-2" placeholder="Başlangıç Bakiyesi" required>
-            <input name="tur" class="w-full border rounded p-2" placeholder="Tür (Nakit, Banka Kartı...)" required>
-            <input name="son_kullanim" class="w-full border rounded p-2" placeholder="Son Kullanım (opsiyonel)">
-            <input name="aciklama" class="w-full border rounded p-2" placeholder="Açıklama (opsiyonel)">
-            <button type="submit" class="w-full bg-blue-600 text-white rounded py-2 font-bold">Kaydet</button>
-        </form>
-    `);
-    document.getElementById('hesapEkleForm').onsubmit = async function(e) {
-        e.preventDefault();
-        const formData = new FormData(e.target);
-        const data = Object.fromEntries(formData.entries());
-        data.bakiye = parseFloat(data.bakiye);
-        const res = await fetch('/api/hesaplar', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(data)
-        });
-        if (res.ok) {
-            modalKapat();
-            loadHesaplar();
-        } else {
-            const hata = await res.json();
-            alert('Hata: ' + (hata.error || 'Bilinmeyen hata'));
-        }
+// Tüm event listener'ları tek bir yerde toplayalım
+document.addEventListener('DOMContentLoaded', () => {
+    // Mevcut fonksiyonlar
+    loadHesaplar();
+    loadIslemler();
+    fillAySec();
+    loadAylikOzet();
+    
+    // Filtre event listener'ı
+    const islemFiltre = document.getElementById('islemFiltre');
+    if (islemFiltre) {
+        islemFiltre.addEventListener('change', e => loadIslemler(e.target.value));
     }
-};
-// Gelir Ekle butonu
-// Hesap seçimi ve kategori ile gelir ekleme
 
-document.getElementById('gelirEkleBtn').onclick = async function() {
-    // Hesapları çek
-    const hesapRes = await fetch('/api/hesaplar');
-    const hesaplar = await hesapRes.json();
-    const hesapSecOptions = hesaplar.map(h => `<option value="${h.id}">${h.ad}</option>`).join('');
-    modalAc(`
-        <h2 class="text-xl font-bold mb-4">Gelir Ekle</h2>
-        <form id="gelirEkleForm" class="space-y-3">
-            <select name="hesap_id" class="w-full border rounded p-2" required>
-                <option value="">Hesap Seç</option>
-                ${hesapSecOptions}
-            </select>
-            <input name="miktar" type="number" class="w-full border rounded p-2" placeholder="Miktar" required>
-            <input name="kategori" class="w-full border rounded p-2" placeholder="Kategori (Maaş, Faiz, Kira...)" required>
-            <input name="aciklama" class="w-full border rounded p-2" placeholder="Açıklama (opsiyonel)">
-            <button type="submit" class="w-full bg-green-600 text-white rounded py-2 font-bold">Kaydet</button>
-        </form>
-    `);
-    document.getElementById('gelirEkleForm').onsubmit = async function(e) {
-        e.preventDefault();
-        const formData = new FormData(e.target);
-        const data = Object.fromEntries(formData.entries());
-        data.tur = 'gelir';
-        data.miktar = parseFloat(data.miktar);
-        const res = await fetch('/api/islemler', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(data)
-        });
-        if (res.ok) {
-            modalKapat();
-            loadIslemler();
-            loadHesaplar();
-        } else {
-            const hata = await res.json();
-            alert('Hata: ' + (hata.error || 'Bilinmeyen hata'));
-        }
+    // Modal kapatma butonu
+    const modalKapatBtn = document.getElementById('modalKapat');
+    if (modalKapatBtn) {
+        modalKapatBtn.onclick = modalKapat;
     }
-};
 
-// Gider Ekle butonu
-// Gider eklerken hesap seçimi ve kategori de alınmalı
-// Hesaplar dinamik olarak yüklenecek
-
-document.getElementById('giderEkleBtn').onclick = async function() {
-    // Hesapları çek
-    const hesapRes = await fetch('/api/hesaplar');
-    const hesaplar = await hesapRes.json();
-    const hesapSecOptions = hesaplar.map(h => `<option value="${h.id}">${h.ad}</option>`).join('');
-    modalAc(`
-        <h2 class="text-xl font-bold mb-4">Gider Ekle</h2>
-        <form id="giderEkleForm" class="space-y-3">
-            <select name="hesap_id" class="w-full border rounded p-2" required>
-                <option value="">Hesap Seç</option>
-                ${hesapSecOptions}
-            </select>
-            <input name="miktar" type="number" class="w-full border rounded p-2" placeholder="Miktar" required>
-            <input name="kategori" class="w-full border rounded p-2" placeholder="Kategori (Market, Fatura...)" required>
-            <input name="aciklama" class="w-full border rounded p-2" placeholder="Açıklama (opsiyonel)">
-            <button type="submit" class="w-full bg-red-600 text-white rounded py-2 font-bold">Kaydet</button>
-        </form>
-    `);
-    document.getElementById('giderEkleForm').onsubmit = async function(e) {
-        e.preventDefault();
-        const formData = new FormData(e.target);
-        const data = Object.fromEntries(formData.entries());
-        data.tur = 'gider';
-        data.miktar = parseFloat(data.miktar);
-        const res = await fetch('/api/islemler', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(data)
-        });
-        if (res.ok) {
-            modalKapat();
-            loadIslemler();
-            loadHesaplar();
-        } else {
-            const hata = await res.json();
-            alert('Hata: ' + (hata.error || 'Bilinmeyen hata'));
-        }
+    // Hesap Ekle butonu
+    const hesapEkleBtn = document.getElementById('hesapEkleBtn');
+    if (hesapEkleBtn) {
+        hesapEkleBtn.onclick = function() {
+            modalAc(`
+                <h2 class="text-xl font-bold mb-4">Hesap Ekle</h2>
+                <form id="hesapEkleForm" class="space-y-3">
+                    <input name="ad" class="w-full border rounded p-2" placeholder="Hesap Adı" required>
+                    <input name="bakiye" type="number" class="w-full border rounded p-2" placeholder="Başlangıç Bakiyesi" required>
+                    <input name="tur" class="w-full border rounded p-2" placeholder="Tür (Nakit, Banka Kartı...)" required>
+                    <input name="son_kullanim" class="w-full border rounded p-2" placeholder="Son Kullanım (opsiyonel)">
+                    <input name="aciklama" class="w-full border rounded p-2" placeholder="Açıklama (opsiyonel)">
+                    <button type="submit" class="w-full bg-blue-600 text-white rounded py-2 font-bold">Kaydet</button>
+                </form>
+            `);
+            document.getElementById('hesapEkleForm').onsubmit = async function(e) {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const data = Object.fromEntries(formData.entries());
+                data.bakiye = parseFloat(data.bakiye);
+                const res = await fetch('/api/hesaplar', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                if (res.ok) {
+                    modalKapat();
+                    loadHesaplar();
+                } else {
+                    const hata = await res.json();
+                    alert('Hata: ' + (hata.error || 'Bilinmeyen hata'));
+                }
+            }
+        };
     }
-};
+
+    // Gelir Ekle butonu
+    const gelirEkleBtn = document.getElementById('gelirEkleBtn');
+    if (gelirEkleBtn) {
+        gelirEkleBtn.onclick = async function() {
+            const hesapRes = await fetch('/api/hesaplar');
+            const hesaplar = await hesapRes.json();
+            const hesapSecOptions = hesaplar.map(h => `<option value="${h.id}">${h.ad}</option>`).join('');
+            modalAc(`
+                <h2 class="text-xl font-bold mb-4">Gelir Ekle</h2>
+                <form id="gelirEkleForm" class="space-y-3">
+                    <select name="hesap_id" class="w-full border rounded p-2" required>
+                        <option value="">Hesap Seç</option>
+                        ${hesapSecOptions}
+                    </select>
+                    <input name="miktar" type="number" class="w-full border rounded p-2" placeholder="Miktar" required>
+                    <input name="kategori" class="w-full border rounded p-2" placeholder="Kategori (Maaş, Faiz, Kira...)" required>
+                    <input name="aciklama" class="w-full border rounded p-2" placeholder="Açıklama (opsiyonel)">
+                    <button type="submit" class="w-full bg-green-600 text-white rounded py-2 font-bold">Kaydet</button>
+                </form>
+            `);
+            document.getElementById('gelirEkleForm').onsubmit = async function(e) {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const data = Object.fromEntries(formData.entries());
+                data.tur = 'gelir';
+                data.miktar = parseFloat(data.miktar);
+                const res = await fetch('/api/islemler', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                if (res.ok) {
+                    modalKapat();
+                    loadIslemler();
+                    loadHesaplar();
+                } else {
+                    const hata = await res.json();
+                    alert('Hata: ' + (hata.error || 'Bilinmeyen hata'));
+                }
+            }
+        };
+    }
+
+    // Gider Ekle butonu
+    const giderEkleBtn = document.getElementById('giderEkleBtn');
+    if (giderEkleBtn) {
+        giderEkleBtn.onclick = async function() {
+            const hesapRes = await fetch('/api/hesaplar');
+            const hesaplar = await hesapRes.json();
+            const hesapSecOptions = hesaplar.map(h => `<option value="${h.id}">${h.ad}</option>`).join('');
+            modalAc(`
+                <h2 class="text-xl font-bold mb-4">Gider Ekle</h2>
+                <form id="giderEkleForm" class="space-y-3">
+                    <select name="hesap_id" class="w-full border rounded p-2" required>
+                        <option value="">Hesap Seç</option>
+                        ${hesapSecOptions}
+                    </select>
+                    <input name="miktar" type="number" class="w-full border rounded p-2" placeholder="Miktar" required>
+                    <input name="kategori" class="w-full border rounded p-2" placeholder="Kategori (Market, Fatura...)" required>
+                    <input name="aciklama" class="w-full border rounded p-2" placeholder="Açıklama (opsiyonel)">
+                    <button type="submit" class="w-full bg-red-600 text-white rounded py-2 font-bold">Kaydet</button>
+                </form>
+            `);
+            document.getElementById('giderEkleForm').onsubmit = async function(e) {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const data = Object.fromEntries(formData.entries());
+                data.tur = 'gider';
+                data.miktar = parseFloat(data.miktar);
+                const res = await fetch('/api/islemler', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                if (res.ok) {
+                    modalKapat();
+                    loadIslemler();
+                    loadHesaplar();
+                } else {
+                    const hata = await res.json();
+                    alert('Hata: ' + (hata.error || 'Bilinmeyen hata'));
+                }
+            }
+        };
+    }
 
 // Transfer butonu
-// İki hesap arasında transfer için
+const transferBtn = document.getElementById('transferBtn');
+if (transferBtn) {
+    transferBtn.onclick = async function() {
+        const hesapRes = await fetch('/api/hesaplar');
+        const hesaplar = await hesapRes.json();
+        const hesapSecOptions = hesaplar.map(h => `<option value="${h.id}">${h.ad}</option>`).join('');
+        modalAc(`
+            <h2 class="text-xl font-bold mb-4">Hesaplar Arası Transfer</h2>
+            <form id="transferForm" class="space-y-3">
+                <select name="kaynak_hesap" class="w-full border rounded p-2" required>
+                    <option value="">Kaynak Hesap</option>
+                    ${hesapSecOptions}
+                </select>
+                <select name="hedef_hesap" class="w-full border rounded p-2" required>
+                    <option value="">Hedef Hesap</option>
+                    ${hesapSecOptions}
+                </select>
+                <input name="miktar" type="number" class="w-full border rounded p-2" placeholder="Miktar" required>
+                <input name="aciklama" class="w-full border rounded p-2" placeholder="Açıklama (opsiyonel)">
+                <button type="submit" class="w-full bg-blue-600 text-white rounded py-2 font-bold">Transfer Yap</button>
+            </form>
+        `);
+        
+        document.getElementById('transferForm').onsubmit = async function(e) {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Aynı hesap seçilmişse uyarı ver
+            if (data.kaynak_hesap === data.hedef_hesap) {
+                alert('Kaynak ve hedef hesap aynı olamaz!');
+                return;
+            }
+            
+            data.miktar = parseFloat(data.miktar);
+            
+            try {
+                const res = await fetch('/api/transfer', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                
+                if (res.ok) {
+                    modalKapat();
+                    loadHesaplar(); // Hesapları güncelle
+                    loadIslemler(); // İşlemleri güncelle
+                } else {
+                    const hata = await res.json();
+                    alert('Hata: ' + (hata.error || 'Bilinmeyen hata'));
+                }
+            } catch (error) {
+                console.error('Transfer hatası:', error);
+                alert('Transfer işlemi sırasında bir hata oluştu.');
+            }
+        };
+    };
+}
 
-document.getElementById('transferBtn').onclick = async function() {
-    const hesapRes = await fetch('/api/hesaplar');
-    const hesaplar = await hesapRes.json();
-    const hesapSecOptions = hesaplar.map(h => `<option value="${h.id}">${h.ad}</option>`).join('');
-    modalAc(`
-        <h2 class="text-xl font-bold mb-4">Hesaplar Arası Transfer</h2>
-        <form id="transferForm" class="space-y-3">
-            <select name="kaynak_hesap" class="w-full border rounded p-2" required>
-                <option value="">Kaynak Hesap</option>
-                ${hesapSecOptions}
-            </select>
-            <select name="hedef_hesap" class="w-full border rounded p-2" required>
-                <option value="">Hedef Hesap</option>
-                ${hesapSecOptions}
-            </select>
-            <input name="miktar" type="number" class="w-full border rounded p-2" placeholder="Miktar" required>
-            <input name="aciklama" class="w-full border rounded p-2" placeholder="Açıklama (opsiyonel)">
-            <button type="submit" class="w-full bg-blue-600 text-white rounded py-2 font-bold">Transfer Yap</button>
-        </form>
-    `);
-    document.getElementById('transferForm').onsubmit = async function(e) {
-        e.preventDefault();
-        const formData = new FormData(e.target);
-        const data = Object.fromEntries(formData.entries());
-        data.tur = 'transfer';
-        data.miktar = parseFloat(data.miktar);
-        // Burada transfer işlemi için özel bir API endpointi gerekebilir!
-        // Şimdilik sadece uyarı verelim:
-        alert('Transfer işlemi için backendde özel bir endpoint eklenmeli!');
-        modalKapat();
+    // Rapor butonu
+    const raporBtn = document.getElementById('raporBtn');
+    if (raporBtn) {
+        raporBtn.onclick = async function() {
+            const res = await fetch('/api/rapor');
+            const raporData = await res.json();
+            
+            modalAc(`
+                <h2 class="text-xl font-bold mb-4">Finansal Rapor</h2>
+                <div class="space-y-4">
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h3 class="font-semibold mb-2">Aylık Özet</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <div class="text-sm text-gray-600">Toplam Gelir</div>
+                                <div class="text-lg font-bold text-green-600">₺${raporData.toplamGelir.toLocaleString('tr-TR', {minimumFractionDigits:2})}</div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-600">Toplam Gider</div>
+                                <div class="text-lg font-bold text-red-600">₺${raporData.toplamGider.toLocaleString('tr-TR', {minimumFractionDigits:2})}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h3 class="font-semibold mb-2">Kategori Bazlı Giderler</h3>
+                        <div class="space-y-2">
+                            ${raporData.kategoriGiderleri.map(k => `
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm">${k.kategori}</span>
+                                    <span class="font-semibold text-red-600">₺${k.toplam.toLocaleString('tr-TR', {minimumFractionDigits:2})}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h3 class="font-semibold mb-2">Hesap Bakiyeleri</h3>
+                        <div class="space-y-2">
+                            ${raporData.hesapBakiyeleri.map(h => `
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm">${h.ad}</span>
+                                    <span class="font-semibold">₺${h.bakiye.toLocaleString('tr-TR', {minimumFractionDigits:2})}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `);
+        };
     }
-};
-
-// Rapor butonu
-
-document.getElementById('raporBtn').onclick = function() {
-    modalAc(`
-        <h2 class="text-xl font-bold mb-4">Rapor</h2>
-        <div class="text-gray-600">Raporlama özelliği yakında eklenecek!</div>
-    `);
-};
+});
