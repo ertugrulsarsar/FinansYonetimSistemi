@@ -4,7 +4,7 @@ from app.models import Hesap, Islem
 from app import db
 from decimal import Decimal
 from datetime import datetime, timedelta
-from sqlalchemy import extract, func, text
+from sqlalchemy import extract, func, text, case
 import traceback
 
 # Logging ayarları
@@ -138,10 +138,15 @@ def test():
 @main.route('/api/rapor', methods=['GET'])
 def get_rapor():
     try:
-        # Aylık toplam gelir ve gider
-        ay_basi = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        # Tarih parametrelerini al
+        yil = int(request.args.get('yil', datetime.now().year))
+        ay = int(request.args.get('ay', datetime.now().month))
+        
+        # Ay başı ve sonu tarihlerini hesapla
+        ay_basi = datetime(yil, ay, 1)
         ay_sonu = (ay_basi + timedelta(days=32)).replace(day=1) - timedelta(days=1)
         
+        # Toplam gelir ve gider
         toplam_gelir = db.session.query(func.sum(Islem.miktar))\
             .filter(Islem.tur == 'gelir')\
             .filter(Islem.tarih >= ay_basi)\
@@ -164,26 +169,86 @@ def get_rapor():
             Islem.tarih <= ay_sonu
         ).group_by(Islem.kategori).all()
         
-        # Hesap bakiyeleri
-        hesaplar = Hesap.query.all()
+        # Günlük bazda gelir-gider dağılımı (MSSQL uyumlu)
+        gunluk_islemler = db.session.query(
+            func.cast(Islem.tarih, db.Date).label('tarih'),
+            Islem.tur,
+            func.sum(Islem.miktar).label('toplam')
+        ).filter(
+            Islem.tarih >= ay_basi,
+            Islem.tarih <= ay_sonu
+        ).group_by(
+            func.cast(Islem.tarih, db.Date),
+            Islem.tur
+        ).all()
+        
+        # Hesap bazlı işlemler - case ifadesi güncellendi
+        hesap_islemleri = db.session.query(
+            Hesap.ad,
+            func.sum(
+                case(
+                    (Islem.tur == 'gelir', Islem.miktar),
+                    else_=0
+                )
+            ).label('gelir'),
+            func.sum(
+                case(
+                    (Islem.tur == 'gider', Islem.miktar),
+                    else_=0
+                )
+            ).label('gider')
+        ).join(Islem).filter(
+            Islem.tarih >= ay_basi,
+            Islem.tarih <= ay_sonu
+        ).group_by(Hesap.ad).all()
+        
+        # En yüksek gider kategorileri
+        en_yuksek_giderler = db.session.query(
+            Islem.kategori,
+            func.sum(Islem.miktar).label('toplam')
+        ).filter(
+            Islem.tur == 'gider',
+            Islem.tarih >= ay_basi,
+            Islem.tarih <= ay_sonu
+        ).group_by(Islem.kategori)\
+        .order_by(func.sum(Islem.miktar).desc())\
+        .limit(5).all()
         
         return jsonify({
             'toplamGelir': float(toplam_gelir),
             'toplamGider': float(toplam_gider),
+            'netDurum': float(toplam_gelir - toplam_gider),
             'kategoriGiderleri': [
                 {'kategori': k.kategori, 'toplam': float(k.toplam)}
                 for k in kategori_giderleri
             ],
-            'hesapBakiyeleri': [
-                {'ad': h.ad, 'bakiye': float(h.bakiye)}
-                for h in hesaplar
+            'gunlukIslemler': [
+                {
+                    'tarih': g.tarih.strftime('%Y-%m-%d'),
+                    'tur': g.tur,
+                    'toplam': float(g.toplam)
+                }
+                for g in gunluk_islemler
+            ],
+            'hesapIslemleri': [
+                {
+                    'hesap': h.ad,
+                    'gelir': float(h.gelir),
+                    'gider': float(h.gider),
+                    'net': float(h.gelir - h.gider)
+                }
+                for h in hesap_islemleri
+            ],
+            'enYuksekGiderler': [
+                {'kategori': g.kategori, 'toplam': float(g.toplam)}
+                for g in en_yuksek_giderler
             ]
         })
+        
     except Exception as e:
         logger.error('Rapor oluşturma hatası: %s', str(e))
-        return jsonify({'error': 'Rapor oluşturulamadı.'}), 400
-    
-    
+        return jsonify({'error': 'Rapor oluşturulamadı.'}), 400        # Tarih parametrelerini al
+
 @main.route('/api/transfer', methods=['POST'])
 def transfer_yap():
     try:
