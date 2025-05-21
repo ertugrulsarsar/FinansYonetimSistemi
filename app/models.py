@@ -29,7 +29,7 @@ class Islem(db.Model):
     miktar = db.Column(db.Numeric(18, 2), nullable=False)
     kategori = db.Column(db.String(100, collation='Turkish_CI_AS'), nullable=False)
     aciklama = db.Column(db.Text(collation='Turkish_CI_AS'))
-    tarih = db.Column(db.DateTime, default=datetime.utcnow)
+    tarih = db.Column(db.DateTime, default=datetime.now)
 
     def to_dict(self):
         return {
